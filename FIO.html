@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con Número de Teléfono</title>
+</head>
+<body>
+    <h2>Chat con Número de Teléfono</h2>
+    <label for="phoneNumber">Número de Teléfono:</label>
+    <input type="text" id="phoneNumber" placeholder="Escribe tu número de teléfono">
+    <button id="connectButton">Conectar</button>
+
+    <div id="chatWindow" style="display:none;">
+        <h3>Chat</h3>
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="Escribe un mensaje...">
+        <button id="sendMessageButton">Enviar</button>
+    </div>
+
+    <script>
+        const connectButton = document.getElementById('connectButton');
+        const phoneNumberInput = document.getElementById('phoneNumber');
+        const chatWindow = document.getElementById('chatWindow');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+        const messagesDiv = document.getElementById('messages');
+
+        let ws;
+
+        connectButton.addEventListener('click', () => {
+            const phoneNumber = phoneNumberInput.value.trim();
+            if (phoneNumber) {
+                // Establecer la conexión WebSocket
+                ws = new WebSocket('ws://localhost:8080');
+
+                ws.onopen = () => {
+                    console.log(`Conectado con número: ${phoneNumber}`);
+                    chatWindow.style.display = 'block';
+
+                    // Enviar el número de teléfono al servidor para identificarse
+                    ws.send(JSON.stringify({ type: 'text', phone: phoneNumber, content: 'se ha conectado' }));
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'text') {
+                        // Mostrar mensaje de texto (asegurándonos de que sea solo texto)
+                        const messageDiv = document.createElement('div');
+                        messageDiv.textContent = `${data.phone}: ${data.content}`;
+                        messagesDiv.appendChild(messageDiv);
+                    } else {
+                        console.log("Mensaje recibido no es texto:", data);
+                    }
+                };
+
+                ws.onclose = () => {
+                    console.log('Conexión cerrada');
+                };
+
+                ws.onerror = (error) => {
+                    console.error('Error en la conexión WebSocket', error);
+                };
+            }
+        });
+
+        sendMessageButton.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            if (message && ws) {
+                // Enviar mensaje de texto al servidor WebSocket
+                const phoneNumber = phoneNumberInput.value.trim();
+                const messageObj = {
+                    type: 'text',  // Asegurándonos de que el tipo sea texto
+                    phone: phoneNumber,
+                    content: message
+                };
+
+                ws.send(JSON.stringify(messageObj));
+
+                // Mostrar el mensaje en la ventana de chat (localmente)
+                const messageDiv = document.createElement('div');
+                messageDiv.textContent = `Tú: ${message}`;
+                messagesDiv.appendChild(messageDiv);
+
+                // Limpiar el campo de texto
+                messageInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
